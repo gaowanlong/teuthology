@@ -1,4 +1,3 @@
-import json
 import logging
 import requests
 import os
@@ -111,7 +110,10 @@ class Ansible(Task):
 
     def setup(self):
         super(Ansible, self).setup()
-        self.find_repo()
+        if self.config.get('rhbuild'):
+            self.repo_path = '/tmp/'
+        else:
+            self.find_repo()
         self.get_playbook()
         self.get_inventory() or self.generate_hosts_file()
         if not hasattr(self, 'playbook_file'):
@@ -249,7 +251,6 @@ class Ansible(Task):
         args = self._build_args()
         command = ' '.join(args)
         log.debug("Running %s", command)
-
         out_log = self.log.getChild('out')
         out, status = pexpect.run(
             command,
@@ -257,7 +258,7 @@ class Ansible(Task):
             logfile=_logfile or LoggerFile(out_log, logging.INFO),
             withexitstatus=True,
             timeout=None,
-        )
+            )
         if status != 0:
             self._handle_failure(command, status)
 
@@ -302,13 +303,13 @@ class Ansible(Task):
         Assemble the list of args to be executed
         """
         fqdns = [r.hostname for r in self.cluster.remotes.keys()]
-        # Assume all remotes use the same username
-        user = self.cluster.remotes.keys()[0].user
-        extra_vars = dict(ansible_ssh_user=user)
-        extra_vars.update(self.config.get('vars', dict()))
+        extra_vars = self.config.get('vars', {})
+        e_vars = ', '.join('"{}":{}'.format(k, v) for k, v
+                           in extra_vars.items())
+        e_vars = '\'{' + e_vars + '}\''
         args = [
             'ansible-playbook', '-v',
-            "--extra-vars", "'%s'" % json.dumps(extra_vars),
+            '--extra-vars', e_vars,
             '-i', self.inventory,
             '--limit', ','.join(fqdns),
             self.playbook_file.name,
