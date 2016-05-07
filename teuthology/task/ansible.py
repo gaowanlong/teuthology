@@ -4,6 +4,7 @@ import os
 import pexpect
 import yaml
 import shutil
+import json
 
 from cStringIO import StringIO
 from tempfile import NamedTemporaryFile
@@ -305,14 +306,11 @@ class Ansible(Task):
         """
         fqdns = [r.hostname for r in self.cluster.remotes.keys()]
         user = self.cluster.remotes.keys()[0].user
-        extra_vars = dict(ansible_ssh_user="\"{0}\"".format(user))
+        extra_vars = dict(ansible_ssh_user=user)
         extra_vars.update(self.config.get('vars', dict()))
-        e_vars = ', '.join('"{}":{}'.format(k, v) for k, v
-                           in extra_vars.items())
-        e_vars = '\'{' + e_vars + '}\''
         args = [
             'ansible-playbook', '-v',
-            '--extra-vars', e_vars,
+            '--extra-vars', "'%s'" % json.dumps(extra_vars),
             '-i', self.inventory,
             '--limit', ','.join(fqdns),
             self.playbook_file.name,
