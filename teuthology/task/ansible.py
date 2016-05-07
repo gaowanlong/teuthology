@@ -111,6 +111,7 @@ class Ansible(Task):
     def setup(self):
         super(Ansible, self).setup()
         if self.config.get('rhbuild'):
+            log.info("Setting repo path to /tmp for rhbuild")
             self.repo_path = '/tmp/'
         else:
             self.find_repo()
@@ -303,7 +304,9 @@ class Ansible(Task):
         Assemble the list of args to be executed
         """
         fqdns = [r.hostname for r in self.cluster.remotes.keys()]
-        extra_vars = self.config.get('vars', {})
+        user = self.cluster.remotes.keys()[0].user
+        extra_vars = dict(ansible_ssh_user="\"{0}\"".format(user))
+        extra_vars.update(self.config.get('vars', dict()))
         e_vars = ', '.join('"{}":{}'.format(k, v) for k, v
                            in extra_vars.items())
         e_vars = '\'{' + e_vars + '}\''
