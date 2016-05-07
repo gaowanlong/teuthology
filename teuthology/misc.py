@@ -896,8 +896,8 @@ def get_scratch_devices(remote):
                     'stat',
                     dev,
                     run.Raw('&&'),
-                    # readable
-                    'sudo', 'dd', 'if=%s' % dev, 'of=/dev/null', 'count=1',
+                    # readable and erase old partitions
+                    'sudo', 'dd', 'if=%s' % dev, 'of=/dev/null', 'count=50',
                     run.Raw('&&'),
                     # not mounted
                     run.Raw('!'),
