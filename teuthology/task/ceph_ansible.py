@@ -90,7 +90,8 @@ class CephAnsible(ansible.Ansible):
     )
 
     def __init__(self, ctx, config):
-        config = config or dict()
+        super(CephAnsible, self).__init__(ctx, config)
+        config = self.config or dict()
         if 'playbook' not in config:
             if config.get('rhbuild'):
                 config['playbook'] = self._default_rh_playbook
@@ -100,7 +101,6 @@ class CephAnsible(ansible.Ansible):
         if 'repo' not in config:
             config['repo'] = os.path.join(teuth_config.ceph_git_base_url,
                                           'ceph-ansible.git')
-        super(CephAnsible, self).__init__(ctx, config)
 
     def execute_playbook(self, _logfile=None):
         """
@@ -137,7 +137,7 @@ class CephAnsible(ansible.Ansible):
                                check_status=False,
                                stdout=out)
             log.info(out.getvalue())
-            if re.search(r'all hosts have already failed',out.getvalue()):
+            if re.search(r'all hosts have already failed', out.getvalue()):
                 log.error("Failed during ansible execution")
                 raise CephAnsibleError("Failed during ansible execution")
         else:
@@ -225,6 +225,7 @@ class CephAnsible(ansible.Ansible):
         if 'public_network' not in extra_vars:
             host_vars['public_network'] = remote.cidr
         return host_vars
+
 
 class CephAnsibleError(Exception):
     pass
