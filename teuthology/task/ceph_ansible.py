@@ -10,6 +10,7 @@ from . import ansible
 from ..config import config as teuth_config
 from ..misc import get_scratch_devices
 from teuthology import misc as teuthology
+from teuthology import contextutil
 from teuthology.orchestra import run
 from tasks import setup_installer
 log = logging.getLogger(__name__)
@@ -146,6 +147,9 @@ class CephAnsible(ansible.Ansible):
                 log.error("Failed during ansible execution")
                 raise CephAnsibleError("Failed during ansible execution")
             self.setup_client_node()
+            wait_for_health = self.config.get('wait-for-healt', True)
+            if wait_for_health:
+                self.wait_for_ceph_health()
         else:
             super(CephAnsible, self).execute_playbook()
 
@@ -234,6 +238,22 @@ class CephAnsible(ansible.Ansible):
         if 'public_network' not in extra_vars:
             host_vars['public_network'] = remote.cidr
         return host_vars
+
+    def wait_for_ceph_health(self):
+        with contextutil.safe_while(sleep=15, tries=6,
+                                    action='check health') as proceed:
+            (remote,) = self.ctx.cluster.only('mon.a').remotes
+            remote.run(args=['sudo', 'ceph', 'osd', 'tree'])
+            remote.run(args=['sudo', 'ceph', '-s'])
+            log.info("Waiting for Ceph health to reach HEALTH_OK \
+                        or HEALTH WARN")
+            while proceed():
+                out = StringIO()
+                remote.run(args=['sudo', 'ceph', 'health'], stdout=out)
+                out = out.getvalue().split(None, 1)[0]
+                log.info("cluster in state: %s", out)
+                if (out == 'HEALTH_OK' or out == 'HEALTH_WARN'):
+                    break
 
     def setup_client_node(self):
         ceph_conf_contents = StringIO()
