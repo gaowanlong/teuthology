@@ -67,6 +67,11 @@ class CephAnsible(ansible.Ansible):
             become=True,
             roles=['ceph-rgw'],
         ),
+        dict(
+            hosts='client',
+            become=True,
+            roles=['ceph-common'],
+        ),
     ]
 
     __doc__ = """
@@ -140,6 +145,7 @@ class CephAnsible(ansible.Ansible):
             if re.search(r'all hosts have already failed', out.getvalue()):
                 log.error("Failed during ansible execution")
                 raise CephAnsibleError("Failed during ansible execution")
+            self.setup_client_node()
         else:
             super(CephAnsible, self).execute_playbook()
 
@@ -165,6 +171,8 @@ class CephAnsible(ansible.Ansible):
             else:
                 installer_node.run(args=['sudo', 'apt-get', 'remove',
                                          '-y', 'ceph-ansible'])
+            self.ctx.cluster.run(args=['sudo', 'rm', '-rf', '/var/lib/ceph'],
+                                 check_status=False)
         else:
             super(CephAnsible, self).teardown()
 
@@ -179,6 +187,7 @@ class CephAnsible(ansible.Ansible):
             mons='mon',
             mdss='mds',
             osds='osd',
+            # client='client',
         )
         hosts_dict = dict()
         for group in sorted(groups_to_roles.keys()):
@@ -225,6 +234,30 @@ class CephAnsible(ansible.Ansible):
         if 'public_network' not in extra_vars:
             host_vars['public_network'] = remote.cidr
         return host_vars
+
+    def setup_client_node(self):
+        ceph_conf_contents = StringIO()
+        ceph_admin_keyring = StringIO()
+        self.ctx.cluster.only('mon.a').run(args=['sudo', 'cat',
+                                                 '/etc/ceph/ceph.conf'],
+                                           stdout=ceph_conf_contents)
+        self.ctx.cluster.only('mon.a').run(args=['sudo', 'ceph', 'auth',
+                                                 'get', 'client.admin'],
+                                           stdout=ceph_admin_keyring)
+        for remote, roles in self.ctx.cluster.remotes.iteritems():
+            for role in roles:
+                if role.startswith('client'):
+                    if remote.os.package_type == 'rpm':
+                        remote.run(args=['sudo', 'yum', 'install',
+                                         '-y', 'ceph-common'])
+                    else:
+                        remote.run(args=['sudo', 'apt-get', '-y',
+                                         'install', 'ceph-common'])
+                    teuthology.sudo_write_file(remote, '/etc/ceph/ceph.conf',
+                                               ceph_conf_contents.getvalue())
+                    teuthology.sudo_write_file(remote,
+                                               '/etc/ceph/ceph.client.admin.keyring',
+                                               ceph_admin_keyring.getvalue())
 
 
 class CephAnsibleError(Exception):
