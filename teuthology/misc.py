@@ -909,8 +909,8 @@ def get_scratch_devices(remote):
             remote.run(
                 args=[
                     'sudo', 'sgdisk',
-                    '--zap-all', '--clear', '--mbrtogpt', '-g '
-                    '--', dev
+                    '--zap-all', '--clear', '--mbrtogpt', run.Raw('-g -- '),
+                     dev
                 ],
             )
             retval.append(dev)
