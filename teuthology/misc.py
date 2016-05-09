@@ -574,7 +574,7 @@ def copy_file(from_remote, from_path, to_remote, to_path=None):
     if to_path is None:
         to_path = from_path
     from_remote.run(args=[
-        'sudo', 'scp', '-v', from_path, "{host}:{file}".format(
+        'scp', '-v', from_path, "{host}:{file}".format(
             host=to_remote.name, file=to_path)
     ])
 
@@ -905,6 +905,13 @@ def get_scratch_devices(remote):
                     run.Raw('|'),
                     'grep', '-q', dev,
                 ]
+            )
+            remote.run(
+                args=[
+                    'sudo', 'sgdisk',
+                    '--zap-all', '--clear', '--mbrtogpt', '-g '
+                    '--', dev
+                ],
             )
             retval.append(dev)
         except CommandFailedError:
