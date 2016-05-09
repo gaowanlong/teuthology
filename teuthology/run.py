@@ -218,8 +218,12 @@ def get_initial_tasks(lock, config, machine_type):
             {'internal.syslog': None},
         ])
     init_tasks.append({'internal.timer': None})
-
-    if 'roles' in config:
+    
+    if 'test-mode' in config:
+        init_tasks.extend([
+            {'clock.check': None}
+        ])
+    elif 'roles' in config:
         init_tasks.extend([
             {'pcp': None},
             {'selinux': None},
