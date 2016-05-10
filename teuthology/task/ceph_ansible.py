@@ -181,6 +181,9 @@ class CephAnsible(ansible.Ansible):
             ctx.cluster.run(args=['sudo', 'rm', '-rf',
                                   run.Raw('/etc/systemd/system/ceph*')],
                             check_status=False)
+            ctx.cluster.run(args=['sudo', 'rm', '-rf',
+                                  run.Raw('/etc/systemd/system/multi-user.target.wants/ceph*')],
+                            check_status=False)
         else:
             super(CephAnsible, self).teardown()
 
