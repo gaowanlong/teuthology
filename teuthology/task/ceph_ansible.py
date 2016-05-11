@@ -178,12 +178,12 @@ class CephAnsible(ansible.Ansible):
             self.ctx.cluster.run(args=['sudo', 'rm', '-rf', '/var/lib/ceph'],
                                  check_status=False)
             # remove old systemd files, known issue
-            ctx.cluster.run(args=['sudo', 'rm', '-rf',
-                                  run.Raw('/etc/systemd/system/ceph*')],
-                            check_status=False)
-            ctx.cluster.run(args=['sudo', 'rm', '-rf',
-                                  run.Raw('/etc/systemd/system/multi-user.target.wants/ceph*')],
-                            check_status=False)
+            self.ctx.cluster.run(args=['sudo', 'rm', '-rf',
+                                       run.Raw('/etc/systemd/system/ceph*')],
+                                 check_status=False)
+            self.ctx.cluster.run(args=['sudo', 'rm', '-rf',
+                                       run.Raw('/etc/systemd/system/multi-user.target.wants/ceph*')],
+                                 check_status=False)
         else:
             super(CephAnsible, self).teardown()
 
