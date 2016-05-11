@@ -694,13 +694,16 @@ def nuke_helper(ctx, should_unlock):
     log.info('Unmount ceph-fuse and killing daemons...')
     shutdown_daemons(ctx)
     log.info('All daemons killed.')
-
     remotes = ctx.cluster.remotes.keys()
-    reboot(ctx, remotes)
-    #shutdown daemons again incase of startup
-    log.info('Stop daemons after restart...')
-    shutdown_daemons(ctx)
-    log.info('All daemons killed.')
+    if ctx.reboot_all:
+        log.info("Rebooting nodes due to reboot-all flag")
+        reboot(ctx, remotes)
+        # shutdown daemons again incase of startup
+        log.info('Stop daemons after restart...')
+        shutdown_daemons(ctx)
+        log.info('All daemons killed.')
+    else:
+        log.info("Not rebooting nodes")
     log.info('Unmount any osd data directories...')
     remove_osd_mounts(ctx)
     log.info('Unmount any osd tmpfs dirs...')
