@@ -695,8 +695,8 @@ def rh_install(ctx, config):
                 log.info("Installing on RHEL node: %s", remote.shortname)
                 p.spawn(rh_install_pkgs, ctx, remote, version)
             else:
-                log.info("Node %s is not RHEL", remote.shortname)
-                raise RuntimeError("Test requires RHEL nodes")
+                log.info("Install on Ubuntu node: %s", remote.shortname)
+                p.spawn(rh_install_deb_pkgs, ctx, remote, version, config['deb-repo'], config['deb-gpg-key'])
     try:
         yield
     finally:
@@ -718,6 +718,62 @@ def rh_uninstall(ctx, config):
         for remote in ctx.cluster.remotes.iterkeys():
             p.spawn(rh_uninstall_pkgs, ctx, remote)
 
+
+def rh_install_deb_pkgs(ctx, remote, version, deb_repo, deb_gpg_key):
+    """
+    Setup debian repo, Install gpg key
+    and Install on debian packages
+    : param ctx
+    : param remote
+    """
+    set_rh_deb_repo(remote, deb_repo, deb_gpg_key)
+    pkgs = ['ceph-deploy']
+    for pkg in pkgs:
+        log.info("Check if %s is already installed on node %s", pkg, remote.shortname)
+        r = remote.run(
+             args=['sudo', 'dpkg', '-l', run.Raw(pkg)],
+             stdout=StringIO(),
+             check_status=False,
+            )
+        if r.stdout.getvalue().find(pkg) == -1:
+            log.info("Installing %s " % pkg)
+            remote.run(args=['sudo', 'apt-get', 'install', pkg, '-y'])
+        else:
+            log.info("Removing and reinstalling %s on %s", pkg, remote.shortname)
+            remote.run(args=['sudo', 'apt-get', '-f', 'install', '-y'])
+            remote.run(args=['sudo', 'apt-get', 'remove', pkg, '-y'])
+            remote.run(args=['sudo', 'apt-get', 'install', pkg, '-y'])
+    #if version == '1.3.2':
+    #     extra_pkgs = ['ceph-selinux']       
+    #elif version == '2.0':
+    #    extra_pkgs = ['rbd-fuse', 'cephfs-fuse']
+    #pkgs = str.join(' ', extra_pkgs)
+    remote.run(args=['sudo', 'ceph-deploy', 'install', '--no-adjust-repos',
+                     remote.shortname])
+    #log.info("Installing extra ceph packages on %s", remote.shortname)
+    #remote.run(args=['sudo', 'apt-get', 'install', pkgs, '-y'])
+
+
+def set_rh_deb_repo(remote, deb_repo, deb_gpg_key):
+    """
+    Sets up debian repo and gpg key for package verification
+    """
+    repos = ['Calamari', 'Installer', 'MON', 'OSD', 'Tools']
+    log.info("deb repo: %s", deb_repo)
+    log.info("gpg key url: %s", deb_gpg_key)
+    remote.run(args=['sudo', 'rm', '-f', run.Raw('/etc/apt/sources.list.d/*')],
+               check_status=False)
+    for repo in repos:
+        cmd='echo deb ' + deb_repo + '/{0}'.format(repo) + \
+            ' $(lsb_release -sc) main'
+        remote.run(args=['sudo', run.Raw(cmd), run.Raw('>'),
+                         "/tmp/{0}.list".format(repo)])
+        remote.run(args=['sudo', 'cp', "/tmp/{0}.list".format(repo),
+                         '/etc/apt/sources.list.d/'])
+    # add gpgkey
+    wget_cmd = 'wget -O - ' + deb_gpg_key
+    remote.run(args=['sudo', run.Raw(wget_cmd),
+                     run.Raw('|'), 'sudo', 'apt-key', 'add', run.Raw('-')])
 
 def rh_install_pkgs(ctx, remote, installed_version):
     """
@@ -795,8 +851,12 @@ def rh_uninstall_pkgs(ctx, remote):
     time.sleep(4)
     remote.run(args=['sudo', 'ceph-deploy', 'purgedata', host])
     log.info("Uninstalling ceph-deploy")
-    remote.run(args=['sudo', 'yum', 'remove', 'ceph-deploy', '-y'], check_status=False)
-    remote.run(args=['sudo', 'yum', 'remove', 'ceph-test', '-y'], check_status=False)
+    if remote.os.name == 'rhel':
+        remote.run(args=['sudo', 'yum', 'remove', 'ceph-deploy', '-y'], check_status=False)
+        remote.run(args=['sudo', 'yum', 'remove', 'ceph-test', '-y'], check_status=False)
+    else:
+        remote.run(args=['sudo', 'apt-get', 'remove', 'ceph-deploy', '-y'], check_status=False)
+        remote.run(args=['sudo', 'apt-get', 'remove', 'ceph-test', '-y'], check_status=False)
 
 
 def _upgrade_rpm_packages(ctx, config, remote, pkgs):
