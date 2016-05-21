@@ -43,6 +43,7 @@ class SELinux(Task):
         super(SELinux, self).__init__(ctx, config)
         self.log = log
         self.mode = self.config.get('mode', 'permissive')
+        self.disable_check = self.config.get('disable-check', False)
 
     def filter_hosts(self):
         """
@@ -50,6 +51,8 @@ class SELinux(Task):
         """
         super(SELinux, self).filter_hosts()
         new_cluster = Cluster()
+        if self.disable_check:
+            return new_cluster
         for (remote, roles) in self.cluster.remotes.iteritems():
             status_info = get_status(remote.name)
             if status_info and status_info.get('is_vm', False):
@@ -114,8 +117,6 @@ class SELinux(Task):
             'chronyd.service',
             'name="cephtest"',
             'scontext=system_u:system_r:nrpe_t:s0',
-            'scontext=system_u:system_r:pcp_pmlogger_t',
-            'scontext=system_u:system_r:pcp_pmcd_t:s0',
         ]
         se_whitelist = self.config.get('whitelist', [])
         if se_whitelist:
