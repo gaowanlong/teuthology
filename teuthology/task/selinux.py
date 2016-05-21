@@ -49,10 +49,12 @@ class SELinux(Task):
         """
         Exclude any non-RPM-based hosts, and any downburst VMs
         """
-        super(SELinux, self).filter_hosts()
         new_cluster = Cluster()
-        if self.disable_check:
-            return new_cluster
+        if self.config.get('disable-check', False):
+	    log.info("Disabling SELinux checks")
+	    self.cluster = new_cluster
+	    return self.cluster
+        super(SELinux, self).filter_hosts()
         for (remote, roles) in self.cluster.remotes.iteritems():
             status_info = get_status(remote.name)
             if status_info and status_info.get('is_vm', False):
