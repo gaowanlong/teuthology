@@ -12,6 +12,7 @@ from ..misc import get_scratch_devices
 from teuthology import misc as teuthology
 from teuthology import contextutil
 from teuthology.orchestra import run
+from teuthology.nuke import remove_osd_mounts, remove_ceph_packages
 from tasks import setup_installer
 log = logging.getLogger(__name__)
 
@@ -162,16 +163,11 @@ class CephAnsible(ansible.Ansible):
                                  check_status=False)
             installer_node = self.installer_node
             installer_node.run(args=['rm', '-rf', 'ceph-ansible'])
+            remove_osd_mounts(self.ctx)
+            remove_ceph_packages(self.ctx)
             if installer_node.os.package_type == 'rpm':
                 installer_node.run(args=['sudo', 'yum', 'remove', '-y',
                                          'ceph-ansible'])
-                installer_node.run(args=['sudo', 'yum', 'remove', '-y', 'ceph',
-                                         'ceph-mon', 'ceph-osd', 'ceph-common',
-                                         'librbd1', 'librados2',
-                                         'libapache2-mod-fastcgi',
-                                         'ceph-selinux', 'python-cephfs',
-                                         'ceph-base', 'ceph-mds'
-                                         'python-rbd', 'python-rados'])
             else:
                 installer_node.run(args=['sudo', 'apt-get', 'remove',
                                          '-y', 'ceph-ansible'])
