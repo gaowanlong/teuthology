@@ -857,6 +857,7 @@ def rh_uninstall_pkgs(ctx, remote):
     else:
         remote.run(args=['sudo', 'apt-get', 'remove', 'ceph-deploy', '-y'], check_status=False)
         remote.run(args=['sudo', 'apt-get', 'remove', 'ceph-test', '-y'], check_status=False)
+    remote.run(args=['sudo', 'rm', '-rf', '/var/lib/ceph'])
 
 
 def _upgrade_rpm_packages(ctx, config, remote, pkgs):
