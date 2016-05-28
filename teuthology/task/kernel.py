@@ -9,6 +9,7 @@ import re
 import shlex
 
 from teuthology import misc as teuthology
+from teuthology.parallel import parallel
 from ..orchestra import run
 from ..config import config as teuth_config
 from ..exceptions import (UnsupportedPackageTypeError,
@@ -645,6 +646,41 @@ def wait_for_reboot(ctx, need_install, timeout, distro=False):
                 if time.time() - starttime > timeout:
                     raise
         time.sleep(1)
+
+
+def install_latest_rh_kernel(ctx, config):
+    """
+    Installs the lastest z stream kernel
+    Reboot for the new kernel to take effect
+    """
+    if config is None:
+        config = {}
+    if config.get('skip'):
+        return
+    with parallel() as p:
+        for remote in ctx.cluster.remotes.iterkeys():
+            p.spawn(update_rh_kernel, remote)
+
+
+def update_rh_kernel(remote):
+    package_type = remote.os.package_type
+    output = StringIO()
+    remote.run(args=['uname', '-a'])
+    import time
+    if package_type == 'rpm':
+        remote.run(args=['sudo', 'yum', 'update', '-y', 'kernel'],
+                   stdout=output)
+        log.info(output.getvalue())
+        if not output.getvalue().find("Installed") == -1:
+            log.info("Kernel updated to latest z stream on %s", remote.shortname)
+            log.info("Rebooting %s", remote.shortname)
+            remote.run(args=['sudo', 'shutdown', '-r', 'now'], wait=False)
+            time.sleep(40)
+            log.info("Reconnecting after reboot")
+            remote.reconnect(timeout=300)
+            remote.run(args=['uname', '-a'])
+        elif not output.getvalue().find('No packages marked for update') == -1:
+            log.info("Latest version already installed on %s", remote.shortname)
 
 
 def need_to_install_distro(remote):
