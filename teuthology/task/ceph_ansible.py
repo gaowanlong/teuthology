@@ -2,6 +2,7 @@ import json
 import os
 import logging
 import re
+import time
 
 from cStringIO import StringIO
 
@@ -159,6 +160,7 @@ class CephAnsible(ansible.Ansible):
             self.ctx.cluster.run(args=['sudo', 'systemctl', 'stop',
                                        'ceph.target'],
                                  check_status=False)
+            time.sleep(4)
             self.ctx.cluster.run(args=['sudo', 'stop', 'ceph-all'],
                                  check_status=False)
             installer_node = self.installer_node
