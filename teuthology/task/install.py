@@ -743,22 +743,18 @@ def rh_install_deb_pkgs(ctx, remote, version, deb_repo, deb_gpg_key):
             remote.run(args=['sudo', 'apt-get', '-f', 'install', '-y'])
             remote.run(args=['sudo', 'apt-get', 'remove', pkg, '-y'])
             remote.run(args=['sudo', 'apt-get', 'install', pkg, '-y'])
-    #if version == '1.3.2':
-    #     extra_pkgs = ['ceph-selinux']       
-    #elif version == '2.0':
-    #    extra_pkgs = ['rbd-fuse', 'cephfs-fuse']
-    #pkgs = str.join(' ', extra_pkgs)
-    remote.run(args=['sudo', 'ceph-deploy', 'install', '--no-adjust-repos',
-                     remote.shortname])
-    #log.info("Installing extra ceph packages on %s", remote.shortname)
-    #remote.run(args=['sudo', 'apt-get', 'install', pkgs, '-y'])
+    remote.run(args=['sudo', 'apt-get', 'install', '-y',
+                     'ceph-mon', 'ceph-osd', 'ceph-mds', 'radosgw'])
+    log.info("Install ceph-test package")
+    remote.run(args=['sudo', 'apt-get', 'install', '-y',
+                     'ceph-test'])
 
 
 def set_rh_deb_repo(remote, deb_repo, deb_gpg_key):
     """
     Sets up debian repo and gpg key for package verification
     """
-    repos = ['Calamari', 'Installer', 'MON', 'OSD', 'Tools']
+    repos = ['MON', 'OSD', 'Tools']
     log.info("deb repo: %s", deb_repo)
     log.info("gpg key url: %s", deb_gpg_key)
     remote.run(args=['sudo', 'rm', '-f', run.Raw('/etc/apt/sources.list.d/*')],
@@ -771,9 +767,14 @@ def set_rh_deb_repo(remote, deb_repo, deb_gpg_key):
         remote.run(args=['sudo', 'cp', "/tmp/{0}.list".format(repo),
                          '/etc/apt/sources.list.d/'])
     # add gpgkey
-    wget_cmd = 'wget -O - ' + deb_gpg_key
-    remote.run(args=['sudo', run.Raw(wget_cmd),
-                     run.Raw('|'), 'sudo', 'apt-key', 'add', run.Raw('-')])
+    ds_keys = [ 'https://www.redhat.com/security/897da07a.txt',
+                'http://puddle.ceph.redhat.com/keys/RPM-GPG-KEY-redhatbuild',
+                'https://www.redhat.com/security/f21541eb.txt' ]
+    for key in ds_keys:
+        wget_cmd = 'wget -O - ' + key
+        remote.run(args=['sudo', run.Raw(wget_cmd),
+                         run.Raw('|'), 'sudo', 'apt-key', 'add', run.Raw('-')])
+    remote.run(args=['sudo', 'apt-get', 'update'])
 
 def rh_install_pkgs(ctx, remote, installed_version):
     """
