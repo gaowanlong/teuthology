@@ -9,7 +9,7 @@ from cStringIO import StringIO
 from . import ansible
 
 from ..config import config as teuth_config
-from ..misc import get_scratch_devices
+from ..misc import get_scratch_devices, reconnect
 from teuthology import misc as teuthology
 from teuthology import contextutil
 from teuthology.orchestra import run
@@ -172,7 +172,11 @@ class CephAnsible(ansible.Ansible):
                                          'ceph-ansible'])
             else:
                 installer_node.run(args=['sudo', 'apt-get', 'remove',
-                                         '-y', 'ceph-ansible'])
+                                         '-y', 'ceph-ansible'])            
+            self.ctx.cluster.run(args=['sudo', 'reboot'], wait=False)
+            time.sleep(30)
+            log.info("Waiting for reconnect after reboot")            
+            reconnect(self.ctx, 480)
             self.ctx.cluster.run(args=['sudo', 'rm', '-rf', '/var/lib/ceph'],
                                  check_status=False)
             # remove old systemd files, known issue
