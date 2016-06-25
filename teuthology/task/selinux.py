@@ -119,7 +119,8 @@ class SELinux(Task):
             'chronyd.service',
             'name="cephtest"',
             'scontext=system_u:system_r:nrpe_t:s0',
-        ]
+            'name="syslog"',
+            ]
         se_whitelist = self.config.get('whitelist', [])
         if se_whitelist:
             known_denials.extend(se_whitelist)
