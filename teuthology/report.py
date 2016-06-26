@@ -288,6 +288,8 @@ class ResultsReporter(object):
         if dead and get_status(job_info) is None:
             set_status(job_info, 'dead')
         job_json = json.dumps(job_info)
+        self.log.info("Job info %s", job_info)
+        self.log.info("Job json %s", job_json)
         headers = {'content-type': 'application/json'}
         response = self.session.post(run_uri, data=job_json, headers=headers)
 
