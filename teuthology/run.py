@@ -228,7 +228,7 @@ def get_initial_tasks(lock, config, machine_type):
             {'pcp': None},
             {'selinux': None},
             {'ansible.cephlab': None},
-            {'kernel.install_latest_rh_kernel': None}
+            {'kernel.install_latest_rh_kernel': None},
             {'clock.check': None}
         ])
 
