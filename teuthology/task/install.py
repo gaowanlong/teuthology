@@ -600,8 +600,9 @@ def install(ctx, config):
     if extras is not None:
         debs = ['ceph-test', 'ceph-fuse',
                 'librados2', 'librbd1',
-                'python-ceph']
-        rpm = ['ceph-fuse', 'librbd1', 'librados2', 'ceph-test', 'python-ceph']
+                'python-ceph', 'rbd-mirror']
+        rpm = ['ceph-fuse', 'librbd1', 'librados2', 'ceph-test', 'python-ceph',
+               'rbd-mirror']
     package_list = dict(deb=debs, rpm=rpm)
     install_packages(ctx, package_list, config)
     try:
@@ -744,7 +745,7 @@ def rh_install_deb_pkgs(ctx, remote, version, deb_repo, deb_gpg_key):
             remote.run(args=['sudo', 'apt-get', 'remove', pkg, '-y'])
             remote.run(args=['sudo', 'apt-get', 'install', pkg, '-y'])
     remote.run(args=['sudo', 'apt-get', 'install', '-y',
-                     'ceph-mon', 'ceph-osd', 'ceph-mds', 'radosgw'])
+                     'ceph-mon', 'ceph-osd', 'ceph-mds', 'radosgw', 'rbd-mirror'])
     log.info("Install ceph-test package")
     remote.run(args=['sudo', 'apt-get', 'install', '-y',
                      'ceph-test'])
@@ -789,7 +790,7 @@ def rh_install_pkgs(ctx, remote, installed_version):
         pkgs.append('ceph-selinux')
     # install ceph-fuse for 2.0 as its not dependency of any core packages
     if (installed_version == '2.0'):
-        pkgs.extend(['ceph-fuse'])
+        pkgs.extend(['ceph-fuse', 'rbd-mirror'])
     rh_version_check = {'0.94.1': '1.3.0', '0.94.3': '1.3.1',
                         '0.94.5': '1.3.2', '10.2.2': '2.0'}
     log.info("Remove any epel packages installed on node %s", remote.shortname)
