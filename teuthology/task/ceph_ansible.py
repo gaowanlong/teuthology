@@ -1,4 +1,5 @@
 import json
+import yaml
 import os
 import logging
 import re
@@ -136,6 +137,8 @@ class CephAnsible(ansible.Ansible):
                                      'ceph-ansible/site.yml'))
             ceph_installer.run(args=('cat', args[5]))
             ceph_installer.run(args=('cat', 'ceph-ansible/site.yml'))
+            if self.config.get('group_vars'):
+                self.set_groupvars(ceph_installer)
             args[8] = 'site.yml'
             out = StringIO()
             str_args = ' '.join(args)
@@ -288,7 +291,15 @@ class CephAnsible(ansible.Ansible):
                                                '/etc/ceph/ceph.client.admin.keyring',
                                                ceph_admin_keyring.getvalue())
 
-
+    def set_groupvars(self, installer):
+        gvars = self.config.get('group_vars')
+        for var in gvars.iterkeys():
+            file = "/tmp/" + var
+            all_vars = gvars[var]
+            with open(file, 'w') as f:
+                f.write(yaml.dump(all_vars, default_flow_style=False))
+            installer.put_file(file, "ceph-ansible/group_vars/" + var )
+            
 class CephAnsibleError(Exception):
     pass
 
